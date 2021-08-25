@@ -1,12 +1,33 @@
-use bootloader::boot_info::{FrameBuffer, FrameBufferInfo, PixelFormat};
+use bootloader::boot_info::{FrameBufferInfo, PixelFormat};
+use core::{
+    fmt::{self, Write},
+    mem, ptr,
+};
 use font8x8::UnicodeFonts;
-use core::{fmt::{self, Write}, ptr, mem};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
 lazy_static! {
     // pub static ref WRITER: [u8; mem::size_of::<Writer>()] = [0; mem::size_of::<Writer>()];
     pub static ref WRITER: Mutex<[u8; mem::size_of::<Writer>()]> = Mutex::new([0; mem::size_of::<Writer>()]);
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => (unsafe { $crate::vga_buffer::_print(format_args!($($arg)*))});
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub unsafe fn _print(args: fmt::Arguments) {
+    (*(WRITER.lock().as_ptr() as *mut Writer))
+        .write_fmt(args)
+        .unwrap();
 }
 
 #[allow(dead_code)]
@@ -36,6 +57,7 @@ pub enum Color {
 struct ColorCode(u8);
 
 impl ColorCode {
+    #[allow(dead_code)]
     fn new(foreground: Color, background: Color) -> Self {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
@@ -75,6 +97,7 @@ impl Writer {
         self.carriage_return()
     }
 
+    #[allow(dead_code)]
     fn add_vspace(&mut self, space: usize) {
         self.y_pos += space;
     }
@@ -133,7 +156,9 @@ impl Writer {
             PixelFormat::RGB => [intensity, intensity, intensity / 2, 0],
             PixelFormat::BGR => [intensity / 2, intensity, intensity, 0],
             PixelFormat::U8 => [if intensity > 200 { 0xf } else { 0 }, 0, 0, 0],
-            _ => { todo!(); }
+            _ => {
+                todo!();
+            }
         };
         let bytes_per_pixel = self.info.bytes_per_pixel;
         let byte_offset = pixel_offset * bytes_per_pixel;
@@ -162,7 +187,3 @@ impl fmt::Write for Writer {
         Ok(())
     }
 }
-//
-// pub fn test_writer() {
-//     (WRITER.as_ptr() as *Writer).write_str("Hello, world!");
-// }
