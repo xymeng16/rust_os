@@ -11,17 +11,10 @@ pub mod interrupts;
 
 use core::panic::PanicInfo;
 use bootloader::{BootInfo, entry_point_test};
-use vga_buffer::print_global_writer_info;
 
-pub fn init(/*boot_info: &'static mut BootInfo*/) {
-    // if let Some(fb) = boot_info.framebuffer.as_mut() {
-    //     let info = fb.info().clone();
-    //     vga_buffer::Writer::init_global_writer(fb.buffer_mut(), info);
-    // }
-
-    print_global_writer_info();
-    // interrupts::init_idt();
-}
+use bootloader::boot_info::FrameBufferInfo;
+use core::mem;
+use vga_buffer::{Writer, WRITER, init_global_writer};
 
 entry_point_test!(ktest_main);
 #[cfg(test)]

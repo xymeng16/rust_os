@@ -4,13 +4,16 @@ use core::{
     mem, ptr,
 };
 use font8x8::UnicodeFonts;
+use crate::serial_println;
 use lazy_static::lazy_static;
 use spin::Mutex;
-use crate::serial_println;
 
 lazy_static! {
     // pub static ref WRITER: [u8; mem::size_of::<Writer>()] = [0; mem::size_of::<Writer>()];
-    pub static ref WRITER: Mutex<[u8; mem::size_of::<Writer>()]> = Mutex::new([0; mem::size_of::<Writer>()]);
+    pub static ref WRITER: Mutex<[u8; mem::size_of::<Writer>()]> = {
+        let val = Mutex::new([0 as u8; 80]);
+        val
+    };
 }
 
 #[macro_export]
@@ -26,9 +29,27 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub unsafe fn _print(args: fmt::Arguments) {
+    // let ptr= WRITER.lock().as_ptr();
+    // serial_println!("{:?}: {:#?}", ptr, (*(WRITER.lock().as_ptr() as *mut Writer)).info);
     (*(WRITER.lock().as_ptr() as *mut Writer))
         .write_fmt(args)
         .unwrap();
+    // (*(WRITER_BASE.as_ptr() as *mut Writer)).write_fmt(args).unwrap();
+
+}
+
+pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
+    let ptr = WRITER.lock().as_ptr() as *mut u8;
+    unsafe {
+        *(ptr as *mut Writer) = Writer::new(framebuffer, info);
+    }
+}
+
+#[allow(dead_code)]
+pub fn print_global_writer_info() {
+    let ptr = WRITER.lock().as_ptr();
+    unsafe { serial_println!("{:?}: {:#?}", ptr, (*(WRITER.lock().as_ptr() as *const Writer)).info); }
+    // unsafe { serial_println!("{:#?}", (*(WRITER.lock().as_ptr() as *const Writer)).info); }
 }
 
 #[allow(dead_code)]
@@ -171,17 +192,6 @@ impl Writer {
 
 }
 
-pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
-    let ptr = WRITER.lock().as_ptr() as *mut u8;
-    unsafe {
-        *(ptr as *mut Writer) = Writer::new(framebuffer, info);
-    }
-    serial_println!("global writer initialized");
-}
-
-pub fn print_global_writer_info() {
-    unsafe { serial_println!("global writer: {:?}", (*(WRITER.lock().as_ptr() as *const Writer)).info); }
-}
 unsafe impl Send for Writer {}
 
 unsafe impl Sync for Writer {}
