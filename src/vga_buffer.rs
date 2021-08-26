@@ -6,6 +6,7 @@ use core::{
 use font8x8::UnicodeFonts;
 use lazy_static::lazy_static;
 use spin::Mutex;
+use crate::serial_println;
 
 lazy_static! {
     // pub static ref WRITER: [u8; mem::size_of::<Writer>()] = [0; mem::size_of::<Writer>()];
@@ -74,7 +75,7 @@ const LINE_SPACING: usize = 0;
 
 pub struct Writer {
     framebuffer: &'static mut [u8],
-    info: FrameBufferInfo,
+    pub info: FrameBufferInfo,
     x_pos: usize,
     y_pos: usize,
 }
@@ -82,7 +83,7 @@ pub struct Writer {
 impl Writer {
     /// Creates a new logger that uses the given framebuffer.
     pub fn new(framebuffer: &'static mut [u8], info: FrameBufferInfo) -> Self {
-        let mut writter = Self {
+        let mut writter = Writer {
             framebuffer,
             info,
             x_pos: 0,
@@ -167,14 +168,20 @@ impl Writer {
         let _ = unsafe { ptr::read_volatile(&self.framebuffer[byte_offset]) };
     }
 
-    pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
-        let ptr = WRITER.lock().as_ptr() as *mut u8;
-        unsafe {
-            *(ptr as *mut Writer) = Writer::new(framebuffer, info);
-        }
-    }
+
 }
 
+pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
+    let ptr = WRITER.lock().as_ptr() as *mut u8;
+    unsafe {
+        *(ptr as *mut Writer) = Writer::new(framebuffer, info);
+    }
+    serial_println!("global writer initialized");
+}
+
+pub fn print_global_writer_info() {
+    unsafe { serial_println!("global writer: {:?}", (*(WRITER.lock().as_ptr() as *const Writer)).info); }
+}
 unsafe impl Send for Writer {}
 
 unsafe impl Sync for Writer {}
