@@ -2,9 +2,9 @@
 #![no_main]
 #![allow(unused_imports)]
 
+use bootloader::{entry_point_test, BootInfo};
 use core::panic::PanicInfo;
-use rust_os::{QemuExitCode, exit_qemu, serial_print, serial_println};
-use bootloader::{BootInfo, entry_point_test};
+use rust_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
 
 entry_point_test!(ktest_main);
 

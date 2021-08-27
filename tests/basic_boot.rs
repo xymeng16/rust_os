@@ -7,18 +7,12 @@
 use bootloader::{entry_point_test, BootInfo};
 use core::panic::PanicInfo;
 use rust_os::{println, serial_print};
-use rust_os::vga_buffer::Writer;
 
 entry_point_test!(ktest_main);
 #[cfg(test)]
 #[allow(unused_variables, unreachable_code)]
 fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
-    if let Some(fb) = boot_info.framebuffer.as_mut() {
-        let info = fb.info().clone();
-        // let mut writter = Writer::new(fb.buffer_mut(), info);
-        // writter.write_str("Hello, world!");
-        Writer::init_global_writer(fb.buffer_mut(), info);
-    }
+    rust_os::init(boot_info);
     test_main();
     loop {}
 }

@@ -5,16 +5,17 @@
 #![reexport_test_harness_main = "test_main"]
 #![allow(unused_imports)]
 
+pub mod gdt;
+pub mod interrupts;
 pub mod serial;
 pub mod vga_buffer;
-pub mod interrupts;
 
+use bootloader::{entry_point_test, BootInfo};
 use core::panic::PanicInfo;
-use bootloader::{BootInfo, entry_point_test};
 
 use bootloader::boot_info::FrameBufferInfo;
 use core::mem;
-use vga_buffer::{Writer, WRITER, init_global_writer};
+use vga_buffer::{init_global_writer, Writer, WRITER};
 
 entry_point_test!(ktest_main);
 #[cfg(test)]
@@ -25,11 +26,14 @@ fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
     loop {}
 }
 
-// #[cfg(test)]
-// pub extern "C" fn _start() -> ! {
-//     test_main();
-//     loop {}
-// }
+pub fn init(boot_info: &'static mut BootInfo) {
+    if let Some(fb) = boot_info.framebuffer.as_mut() {
+        let info = fb.info().clone();
+        vga_buffer::init_global_writer(fb.buffer_mut(), info);
+    }
+    interrupts::init_idt();
+    gdt::init();
+}
 
 pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
@@ -44,8 +48,8 @@ pub trait Testable {
 }
 
 impl<T> Testable for T
-    where
-        T: Fn(),
+where
+    T: Fn(),
 {
     fn run(&self) {
         serial_print!("{}...\t", core::any::type_name::<T>());

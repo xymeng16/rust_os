@@ -1,10 +1,10 @@
+use crate::serial_println;
 use bootloader::boot_info::{FrameBufferInfo, PixelFormat};
 use core::{
     fmt::{self, Write},
     mem, ptr,
 };
 use font8x8::UnicodeFonts;
-use crate::serial_println;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -35,7 +35,6 @@ pub unsafe fn _print(args: fmt::Arguments) {
         .write_fmt(args)
         .unwrap();
     // (*(WRITER_BASE.as_ptr() as *mut Writer)).write_fmt(args).unwrap();
-
 }
 
 pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
@@ -48,7 +47,13 @@ pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo)
 #[allow(dead_code)]
 pub fn print_global_writer_info() {
     let ptr = WRITER.lock().as_ptr();
-    unsafe { serial_println!("{:?}: {:#?}", ptr, (*(WRITER.lock().as_ptr() as *const Writer)).info); }
+    unsafe {
+        serial_println!(
+            "{:?}: {:#?}",
+            ptr,
+            (*(WRITER.lock().as_ptr() as *const Writer)).info
+        );
+    }
     // unsafe { serial_println!("{:#?}", (*(WRITER.lock().as_ptr() as *const Writer)).info); }
 }
 
@@ -188,8 +193,6 @@ impl Writer {
             .copy_from_slice(&color[..bytes_per_pixel]);
         let _ = unsafe { ptr::read_volatile(&self.framebuffer[byte_offset]) };
     }
-
-
 }
 
 unsafe impl Send for Writer {}
