@@ -47,6 +47,11 @@ pub fn init() {
     use x86_64::instructions::tables::load_tss;
 
     GDT.0.load();
+    /* once GDT is loaded, something wrong happens when `iretq` is executed
+    the stack is checked ok and the address to-be-returned is also the correct one.
+    One guess is that GDT is strangely become invalid hence CPU cannot work with it.
+    TODO: investigate what happened to GDT and why it will influence `iretq` instruction
+    */
     unsafe {
         // unsafe since it is possible to break memory safety by loading invalid selectors
         set_cs(GDT.1.code_selector);
