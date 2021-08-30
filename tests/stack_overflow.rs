@@ -2,7 +2,8 @@
 #![no_main]
 #![feature(abi_x86_interrupt)]
 
-use bootloader::{entry_point_test, BootInfo};
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use lazy_static::lazy_static;
 use rust_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
@@ -26,7 +27,9 @@ lazy_static! {
 pub fn init_test_idt() {
     TEST_IDT.load();
 }
-entry_point_test!(ktest_main);
+
+#[cfg(test)]
+entry_point!(ktest_main);
 
 #[cfg(test)]
 #[allow(unused_variables, unreachable_code)]
@@ -50,6 +53,7 @@ fn panic(info: &PanicInfo) -> ! {
     rust_os::test_panic_handler(info)
 }
 
+#[allow(unreachable_code)]
 extern "x86-interrupt" fn test_double_fault_handler(
     _stack_frame: InterruptStackFrame,
     _error_code: u64,

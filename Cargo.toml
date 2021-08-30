@@ -19,7 +19,7 @@ name = "stack_overflow"
 harness = false
 
 [dependencies]
-bootloader = { git = "https://github.com/xymeng16/bootloader.git" } # replace this with a version number
+bootloader = { version = "0.10.8" } # replace this with a version number
 x86_64 = "0.14.2"
 uart_16550 = "0.2.14"
 spin = { version = "0.9.0", features = ["lazy"] }
@@ -27,5 +27,11 @@ font8x8 = { version = "0.2.7", default-features = false, features = ["unicode"],
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 volatile = "0.4.4"
 pic8259 = "0.10.2"
+pc-keyboard = "0.5.1"
+
 [features]
 default = ["font8x8"]
+
+[package.metadata.bootloader]
+map-physical-memory = true
+physical-memory-offset = 0x0000_4000_0000_0000

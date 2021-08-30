@@ -44,6 +44,7 @@ macro_rules! println {
 #[doc(hidden)]
 pub unsafe fn _print(args: fmt::Arguments) {
     use x86_64::instructions::interrupts;
+
     interrupts::without_interrupts(|| {
         GLOBAL_WRITER_MUT!()
             .write_fmt(args)

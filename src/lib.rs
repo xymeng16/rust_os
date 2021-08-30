@@ -7,10 +7,13 @@
 
 pub mod gdt;
 pub mod interrupts;
+pub mod memory;
 pub mod serial;
 pub mod vga_buffer;
 
-use bootloader::{entry_point_test, BootInfo};
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
+
 use core::panic::PanicInfo;
 
 use bootloader::boot_info::{FrameBuffer, FrameBufferInfo};
@@ -18,24 +21,23 @@ use core::mem;
 use core::ptr::slice_from_raw_parts_mut;
 use vga_buffer::{init_global_writer, Writer, WRITER};
 
-entry_point_test!(ktest_main);
+#[cfg(test)]
+entry_point!(ktest_main);
+
 #[cfg(test)]
 #[allow(unused_variables)]
 fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(fb) = boot_info.framebuffer.as_mut() {
-        init(fb.raw_buffer_info().0, fb.raw_buffer_info().1, fb.info());
+        let fb_info = fb.info();
+
+        vga_buffer::init_global_writer(fb.buffer_mut(), fb_info);
     }
+    init();
     test_main();
     hlt_loop();
 }
 
-pub fn init(fb_start: u64, fb_len: usize, fb_info: FrameBufferInfo) {
-    unsafe {
-        vga_buffer::init_global_writer(
-            &mut *slice_from_raw_parts_mut(fb_start as *mut u8, fb_len),
-            fb_info,
-        );
-    }
+pub fn init() {
     gdt::init();
     interrupts::init_idt();
     unsafe {
