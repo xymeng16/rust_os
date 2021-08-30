@@ -13,26 +13,35 @@ pub mod vga_buffer;
 use bootloader::{entry_point_test, BootInfo};
 use core::panic::PanicInfo;
 
-use bootloader::boot_info::FrameBufferInfo;
+use bootloader::boot_info::{FrameBuffer, FrameBufferInfo};
 use core::mem;
+use core::ptr::slice_from_raw_parts_mut;
 use vga_buffer::{init_global_writer, Writer, WRITER};
 
 entry_point_test!(ktest_main);
 #[cfg(test)]
 #[allow(unused_variables)]
 fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
-    init(boot_info);
+    if let Some(fb) = boot_info.framebuffer.as_mut() {
+        init(fb.raw_buffer_info().0, fb.raw_buffer_info().1, fb.info());
+    }
     test_main();
-    loop {}
+    hlt_loop();
 }
 
-pub fn init(boot_info: &'static mut BootInfo) {
-    if let Some(fb) = boot_info.framebuffer.as_mut() {
-        let info = fb.info().clone();
-        vga_buffer::init_global_writer(fb.buffer_mut(), info);
+pub fn init(fb_start: u64, fb_len: usize, fb_info: FrameBufferInfo) {
+    unsafe {
+        vga_buffer::init_global_writer(
+            &mut *slice_from_raw_parts_mut(fb_start as *mut u8, fb_len),
+            fb_info,
+        );
     }
-    interrupts::init_idt();
     gdt::init();
+    interrupts::init_idt();
+    unsafe {
+        interrupts::PICS.lock().initialize();
+    }
+    x86_64::instructions::interrupts::enable();
 }
 
 pub fn test_runner(tests: &[&dyn Testable]) {
@@ -88,4 +97,10 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
     }
 
     loop {}
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
 }

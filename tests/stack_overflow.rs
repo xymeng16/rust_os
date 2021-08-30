@@ -2,13 +2,13 @@
 #![no_main]
 #![feature(abi_x86_interrupt)]
 
+use bootloader::{entry_point_test, BootInfo};
 use core::panic::PanicInfo;
-use bootloader::{BootInfo, entry_point_test};
 use lazy_static::lazy_static;
-use x86_64::structures::idt::InterruptDescriptorTable;
-use rust_os::{exit_qemu, QemuExitCode, serial_print, serial_println};
-use x86_64::structures::idt::InterruptStackFrame;
+use rust_os::{exit_qemu, serial_print, serial_println, QemuExitCode};
 use volatile::Volatile;
+use x86_64::structures::idt::InterruptDescriptorTable;
+use x86_64::structures::idt::InterruptStackFrame;
 
 lazy_static! {
     static ref TEST_IDT: InterruptDescriptorTable = {
@@ -49,8 +49,6 @@ fn stack_overflow() {
 fn panic(info: &PanicInfo) -> ! {
     rust_os::test_panic_handler(info)
 }
-
-
 
 extern "x86-interrupt" fn test_double_fault_handler(
     _stack_frame: InterruptStackFrame,

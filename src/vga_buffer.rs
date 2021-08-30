@@ -17,6 +17,20 @@ lazy_static! {
 }
 
 #[macro_export]
+macro_rules! GLOBAL_WRITER {
+    () => {
+        *(WRITER.lock().as_ptr() as *const Writer)
+    };
+}
+
+#[macro_export]
+macro_rules! GLOBAL_WRITER_MUT {
+    () => {
+        *(WRITER.lock().as_ptr() as *mut Writer)
+    };
+}
+
+#[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => (unsafe { $crate::vga_buffer::_print(format_args!($($arg)*))});
 }
@@ -29,32 +43,18 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub unsafe fn _print(args: fmt::Arguments) {
-    // let ptr= WRITER.lock().as_ptr();
-    // serial_println!("{:?}: {:#?}", ptr, (*(WRITER.lock().as_ptr() as *mut Writer)).info);
-    (*(WRITER.lock().as_ptr() as *mut Writer))
-        .write_fmt(args)
-        .unwrap();
-    // (*(WRITER_BASE.as_ptr() as *mut Writer)).write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| {
+        GLOBAL_WRITER_MUT!()
+            .write_fmt(args)
+            .expect("Printing to VGA failed");
+    });
 }
 
 pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
-    let ptr = WRITER.lock().as_ptr() as *mut u8;
     unsafe {
-        *(ptr as *mut Writer) = Writer::new(framebuffer, info);
+        GLOBAL_WRITER_MUT!() = Writer::new(framebuffer, info);
     }
-}
-
-#[allow(dead_code)]
-pub fn print_global_writer_info() {
-    let ptr = WRITER.lock().as_ptr();
-    unsafe {
-        serial_println!(
-            "{:?}: {:#?}",
-            ptr,
-            (*(WRITER.lock().as_ptr() as *const Writer)).info
-        );
-    }
-    // unsafe { serial_println!("{:#?}", (*(WRITER.lock().as_ptr() as *const Writer)).info); }
 }
 
 #[allow(dead_code)]

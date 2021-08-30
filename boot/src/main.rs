@@ -15,13 +15,7 @@ const TEST_ARGS: &[&str] = &[
     "--no-reboot",
 ];
 const TEST_TIMEOUT_SECS: u64 = 10;
-const DEBUG_ARGS: &[&str] = &[
-    "-device",
-    "isa-debug-exit,iobase=0xf4,iosize=0x04",
-    "-serial",
-    "stdio",
-    "--no-reboot",
-];
+
 fn main() {
     let mut args = std::env::args().skip(1); // skip executable name
 
