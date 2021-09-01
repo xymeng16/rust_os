@@ -13,6 +13,8 @@ use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use rust_os::println;
 use x86_64::VirtAddr;
+use alloc::vec::Vec;
+use alloc::rc::Rc;
 
 entry_point!(kernel_main);
 
@@ -38,10 +40,22 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let heap_value = Box::new(41);
     println!("heap value at {:p}", heap_value);
 
+    let mut vec = Vec::new();
+    for i in 0..500 {
+        vec.push(i);
+    }
+    println!("vec at {:p}", vec.as_slice());
+
+    let reference_counted = Rc::new(alloc::vec![1, 2, 3]);
+    let cloned_reference = reference_counted.clone();
+    println!("current reference count is {}", Rc::strong_count(&cloned_reference));
+    core::mem::drop(reference_counted);
+    println!("reference count is {} now", Rc::strong_count(&cloned_reference));
+
     println!("Hello rust_os!");
 
     #[cfg(test)]
-    test_main();
+        test_main();
 
     rust_os::hlt_loop();
 }

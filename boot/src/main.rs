@@ -9,8 +9,6 @@ const RUN_ARGS: &[&str] = &[
     "-s",
     "-serial",
     "stdio",
-    "-display",
-    "gtk,zoom-to-fit=on",
 ];
 const TEST_ARGS: &[&str] = &[
     "-device",
