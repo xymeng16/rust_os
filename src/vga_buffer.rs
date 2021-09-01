@@ -9,25 +9,7 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 
 lazy_static! {
-    // pub static ref WRITER: [u8; mem::size_of::<Writer>()] = [0; mem::size_of::<Writer>()];
-    pub static ref WRITER: Mutex<[u8; mem::size_of::<Writer>()]> = {
-        let val = Mutex::new([0 as u8; 80]);
-        val
-    };
-}
-
-#[macro_export]
-macro_rules! GLOBAL_WRITER {
-    () => {
-        *(WRITER.lock().as_ptr() as *const Writer)
-    };
-}
-
-#[macro_export]
-macro_rules! GLOBAL_WRITER_MUT {
-    () => {
-        *(WRITER.lock().as_ptr() as *mut Writer)
-    };
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer::empty());
 }
 
 #[macro_export]
@@ -46,16 +28,20 @@ pub unsafe fn _print(args: fmt::Arguments) {
     use x86_64::instructions::interrupts;
 
     interrupts::without_interrupts(|| {
-        GLOBAL_WRITER_MUT!()
+        WRITER
+            .lock()
             .write_fmt(args)
             .expect("Printing to VGA failed");
     });
 }
 
-pub fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
-    unsafe {
-        GLOBAL_WRITER_MUT!() = Writer::new(framebuffer, info);
-    }
+/// Initialize the global writer with given framebuffer and FrameBufferInfo.
+///
+/// This function is unsafe because the caller must guarantee that the given
+/// framebuffer address and FrameBufferInfo are valid. Otherwise some unpredictable
+/// errors may occur.
+pub unsafe fn init_global_writer(framebuffer: &'static mut [u8], info: FrameBufferInfo) {
+    WRITER.lock().init_with(framebuffer, info);
 }
 
 #[allow(dead_code)]
@@ -105,23 +91,74 @@ pub struct Writer {
     pub info: FrameBufferInfo,
     x_pos: usize,
     y_pos: usize,
+    usable: bool,
 }
 
 impl Writer {
-    /// Creates a new logger that uses the given framebuffer.
-    pub fn new(framebuffer: &'static mut [u8], info: FrameBufferInfo) -> Self {
+    /// Creates a new writer that uses the given framebuffer.
+    ///
+    /// This function is unsafe because the caller must guarantee that the given
+    /// framebuffer address and FrameBufferInfo are valid. Otherwise some unpredictable
+    /// errors may occur.
+    pub unsafe fn new(framebuffer: &'static mut [u8], info: FrameBufferInfo) -> Self {
         let mut writter = Writer {
             framebuffer,
             info,
             x_pos: 0,
             y_pos: 0,
+            usable: true,
         };
         writter.clear();
         writter
     }
 
+    /// Creates an uninitialized writer, which cannot be used until initialized
+    pub fn empty() -> Self {
+        Writer {
+            framebuffer: &mut [],
+            info: FrameBufferInfo {
+                byte_len: 0,
+                horizontal_resolution: 0,
+                vertical_resolution: 0,
+                pixel_format: PixelFormat::RGB,
+                bytes_per_pixel: 0,
+                stride: 0,
+            },
+            x_pos: 0,
+            y_pos: 0,
+            usable: false,
+        }
+    }
+
+    /// Initialize an unused writer using given address and info of a FrameBuffer.
+    ///
+    /// This function is unsafe because the caller must guarantee that the given
+    /// framebuffer address and FrameBufferInfo are valid. Otherwise some unpredictable
+    /// errors may occur.
+    pub unsafe fn init_with(&mut self, framebuffer: &'static mut [u8], info: FrameBufferInfo) {
+        if self.usable == true {
+            panic!("Re-initialize an initialized Writer is not allowed.");
+        }
+        self.framebuffer = framebuffer;
+        self.info = info;
+        self.x_pos = 0;
+        self.y_pos = 0;
+        self.usable = true;
+        self.clear();
+    }
+
+    /// Returns the address of the framebuffer, which can not be mutated
     pub fn buffer_addr(&self) -> *const u8 {
+        self.panic_if_unusable();
+
         self.framebuffer.as_ptr()
+    }
+
+    #[inline(always)]
+    fn panic_if_unusable(&self) {
+        if !self.usable {
+            panic!("Global writer is uninitialized.");
+        }
     }
 
     fn newline(&mut self) {
@@ -140,6 +177,8 @@ impl Writer {
 
     /// Erases all text on the screen.
     pub fn clear(&mut self) {
+        self.panic_if_unusable();
+
         self.x_pos = 0;
         self.y_pos = 0;
         self.framebuffer.fill(0);
@@ -206,6 +245,8 @@ unsafe impl Sync for Writer {}
 
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.panic_if_unusable();
+
         for c in s.chars() {
             self.write_char(c);
         }

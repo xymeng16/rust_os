@@ -4,28 +4,16 @@
 #![feature(abi_x86_interrupt)]
 #![test_runner(rust_os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
-#![allow(unused_imports)]
 
-// mod gdt;
-// mod interrupts;
-// mod serial;
-// mod vga_buffer;
-
-use bootloader::boot_info::{FrameBuffer, FrameBufferInfo};
+use bootloader::boot_info::FrameBuffer;
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use core::ptr::slice_from_raw_parts_mut;
 use rust_os::println;
-use x86_64::structures::paging::{Page, Translate};
 
 entry_point!(kernel_main);
 
 #[allow(unreachable_code)]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    use rust_os::memory;
-    use x86_64::VirtAddr;
-    use memory::BootInfoFrameAllocator;
-
     if let Some(fb) = boot_info.framebuffer.as_mut() {
         init(fb);
     }
@@ -45,7 +33,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
 pub fn init(fb: &'static mut FrameBuffer) {
     let fb_info = fb.info();
-    rust_os::vga_buffer::init_global_writer(fb.buffer_mut(), fb_info);
+    unsafe {
+        rust_os::vga_buffer::init_global_writer(fb.buffer_mut(), fb_info);
+    }
 
     rust_os::init();
 }
