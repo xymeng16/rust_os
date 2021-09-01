@@ -120,6 +120,10 @@ impl Writer {
         writter
     }
 
+    pub fn buffer_addr(&self) -> *const u8 {
+        self.framebuffer.as_ptr()
+    }
+
     fn newline(&mut self) {
         self.y_pos += 8 + LINE_SPACING;
         self.carriage_return()
@@ -184,8 +188,8 @@ impl Writer {
             PixelFormat::RGB => [intensity, intensity, intensity / 2, 0],
             PixelFormat::BGR => [intensity / 2, intensity, intensity, 0],
             PixelFormat::U8 => [if intensity > 200 { 0xf } else { 0 }, 0, 0, 0],
-            _ => {
-                todo!();
+            other => {
+                panic!("PixelFormat not supported: {:#?}", other);
             }
         };
         let bytes_per_pixel = self.info.bytes_per_pixel;

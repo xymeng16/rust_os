@@ -16,14 +16,15 @@ use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use core::ptr::slice_from_raw_parts_mut;
 use rust_os::println;
-use x86_64::structures::paging::Page;
+use x86_64::structures::paging::{Page, Translate};
 
 entry_point!(kernel_main);
 
 #[allow(unreachable_code)]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    use rust_os::memory::active_level_4_table;
+    use rust_os::memory;
     use x86_64::VirtAddr;
+    use memory::BootInfoFrameAllocator;
 
     if let Some(fb) = boot_info.framebuffer.as_mut() {
         init(fb);
@@ -35,29 +36,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     }
 
     println!("Hello rust_os!");
-
-    let phys_mem_offset = VirtAddr::new(physical_memory_offset);
-    let l4_table = unsafe { active_level_4_table(phys_mem_offset) };
-
-    for (i, entry) in l4_table.iter().enumerate() {
-        use x86_64::structures::paging::PageTable;
-
-        if !entry.is_unused() {
-            println!("L4 Entry {}: {:?}", i, entry);
-
-            // get the physical address from the entry and convert it
-            let phys = entry.frame().unwrap().start_address();
-            let virt = phys_mem_offset + phys.as_u64();
-            let ptr = virt.as_mut_ptr();
-            let l3_table: &PageTable = unsafe { &*ptr };
-
-            for (i, entry) in l3_table.iter().enumerate() {
-                if !entry.is_unused() {
-                    println!("L3 Entry {}: {:?}", i, entry);
-                }
-            }
-        }
-    }
 
     #[cfg(test)]
     test_main();
@@ -78,6 +56,7 @@ fn panic(_info: &PanicInfo) -> ! {
     println!("{}", _info);
     rust_os::hlt_loop();
 }
+
 #[cfg(test)]
 mod tests {
     #[test_case]
