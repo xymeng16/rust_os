@@ -24,7 +24,9 @@ fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
 pub fn init(fb: &'static mut FrameBuffer) {
     let fb_info = fb.info();
 
-    unsafe { rust_os::vga_buffer::init_global_writer(fb.buffer_mut(), fb_info); }
+    unsafe {
+        rust_os::vga_buffer::init_global_writer(fb.buffer_mut(), fb_info);
+    }
 
     rust_os::init();
 }

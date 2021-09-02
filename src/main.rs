@@ -8,13 +8,13 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
+use alloc::rc::Rc;
+use alloc::vec::Vec;
 use bootloader::boot_info::FrameBuffer;
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
 use rust_os::println;
 use x86_64::VirtAddr;
-use alloc::vec::Vec;
-use alloc::rc::Rc;
 
 entry_point!(kernel_main);
 
@@ -48,14 +48,20 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     let reference_counted = Rc::new(alloc::vec![1, 2, 3]);
     let cloned_reference = reference_counted.clone();
-    println!("current reference count is {}", Rc::strong_count(&cloned_reference));
+    println!(
+        "current reference count is {}",
+        Rc::strong_count(&cloned_reference)
+    );
     core::mem::drop(reference_counted);
-    println!("reference count is {} now", Rc::strong_count(&cloned_reference));
+    println!(
+        "reference count is {} now",
+        Rc::strong_count(&cloned_reference)
+    );
 
     println!("Hello rust_os!");
 
     #[cfg(test)]
-        test_main();
+    test_main();
 
     rust_os::hlt_loop();
 }
