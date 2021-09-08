@@ -1,10 +1,7 @@
+use super::Locked;
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::ptr;
 use linked_list_allocator::align_up;
-
-pub struct Locked<A> {
-    inner: spin::Mutex<A>,
-}
 
 impl<A> Locked<A> {
     pub const fn new(inner: A) -> Self {

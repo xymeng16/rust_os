@@ -6,12 +6,11 @@
 
 extern crate alloc;
 
-
-use bootloader::{entry_point, BootInfo};
-use core::panic::PanicInfo;
-use bootloader::boot_info::FrameBuffer;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use bootloader::boot_info::FrameBuffer;
+use bootloader::{entry_point, BootInfo};
+use core::panic::PanicInfo;
 use rust_os::allocator::HEAP_SIZE;
 
 entry_point!(ktest_main);
@@ -27,11 +26,8 @@ fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset.into_option().unwrap());
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe {
-        BootInfoFrameAllocator::init(&boot_info.memory_regions)
-    };
-    allocator::init_heap(&mut mapper, &mut frame_allocator)
-        .expect("heap initialization failed");
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     test_main();
     loop {}
@@ -40,7 +36,9 @@ fn ktest_main(boot_info: &'static mut BootInfo) -> ! {
 pub fn init(fb: &'static mut FrameBuffer) {
     let fb_info = fb.info();
 
-    unsafe { rust_os::vga_buffer::init_global_writer(fb.buffer_mut(), fb_info); }
+    unsafe {
+        rust_os::vga_buffer::init_global_writer(fb.buffer_mut(), fb_info);
+    }
 
     rust_os::init();
 }
